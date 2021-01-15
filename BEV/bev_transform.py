@@ -4,7 +4,6 @@ from . import config as cfg
 import cv2
 import os
 
-
 def get_RX(pitch_angle):
     pitch_angle = (np.pi / 180) * pitch_angle
     return np.array([
@@ -38,7 +37,6 @@ def get_T(vtx, vty, vtz):
         [0, 1, 0, vty],
         [0, 0, 1, vtz],
         [0, 0, 0, 1]])
-
 
 def calculate_BEV_H(calib_params, pix_per_meter=100):
     output_w = cfg.camera_info[cfg.camera_name]['output_w']
@@ -83,7 +81,6 @@ def calculate_BEV_H(calib_params, pix_per_meter=100):
 
     return image2ground
 
-
 def get_BEV_H():
     calib_yaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
                                    cfg.calib_file_path[cfg.camera_name])
@@ -102,33 +99,37 @@ def get_BEV_H():
             calib_matrices[param_to_parse] = matrix
     
     H = calculate_BEV_H(calib_matrices, pix_per_meter=cfg.pix_per_meter)
-    return H
-
+    return H, calib_matrices
 
 class BEV(object):
     def __init__(self):
-        self.H = get_BEV_H()
+        self.H, self.calib_matrices = get_BEV_H()
+        self.inv_H = np.linalg.inv(self.H)
         self.pixels_per_meter = cfg.pix_per_meter
         self.output_w = cfg.camera_info[cfg.camera_name]['output_w']
         self.output_h = cfg.camera_info[cfg.camera_name]['output_h']
+
+        self.f_x = self.calib_matrices['camera_matrix'][0,0]
+        self.f_y = self.calib_matrices['camera_matrix'][1,1]
 
     def transform(self, img):
         transformed_img = cv2.warpPerspective(img, self.H, (self.output_w, 
                                                             self.output_h))
         return transformed_img
 
+    def calculate_dist_meters(self, p_meters):
+        dists = np.sqrt(p_meters[:,0]*p_meters[:,0] + p_meters[:,1]*p_meters[:,1])
+        return dists
+
     def calculate_dist(self, points_bev):
         new_p_centered = [self.output_w/2, self.output_h] - points_bev 
         new_p_meters = new_p_centered / self.pixels_per_meter
-        dists = np.sqrt(new_p_meters[:,0]*new_p_meters[:,0] + new_p_meters[:,1]*new_p_meters[:,1])
+        dists = self.calculate_dist_meters(new_p_meters)
         return dists
 
     def calculate_dist_bev(self, points):
         points_bev = self.points_to_bev(points)
-        new_p_centered = [self.output_w/2, self.output_h] - points_bev 
-        new_p_meters = new_p_centered / self.pixels_per_meter
-        dists = np.sqrt(new_p_meters[:,0]*new_p_meters[:,0] + new_p_meters[:,1]*new_p_meters[:,1])
-        return dists
+        return self.calculate_dist(points_bev)
 
     def points_to_bev(self, points):
         points_ex = np.ones((points.shape[0],points.shape[1]+1))
@@ -139,6 +140,33 @@ class BEV(object):
         new_p = new_p[:,:2]
 
         return new_p
+
+    def bev_to_points(self, points):
+        points_ex = np.ones((points.shape[0],points.shape[1]+1))
+        points_ex[:,:2] = points
+        new_p = self.inv_H @ points_ex.T
+        new_p = new_p.T
+        new_p /= new_p[:,2:]
+        new_p = new_p[:,:2]
+
+        return new_p
+
+    def pixels_to_meters(self, points):
+        points_bev = self.points_to_bev(points)
+        new_p_centered = [self.output_w/2, self.output_h] - points_bev 
+        new_p_meters = new_p_centered / self.pixels_per_meter
+        new_p_meters[:,0]*=-1
+        return new_p_meters
+
+    def meters_to_pixels(self, points):
+        new_p_pixels = self.pixels_per_meter * points
+        new_p_uncentered = [self.output_w/2, self.output_h] - new_p_pixels
+        new_p_pixels = self.bev_to_points(new_p_uncentered)
+
+        return new_p_pixels
+
+    def get_height_in_pixels(self, height, distance):
+        return self.f_y * height/distance
 
     def __call__(self, img):
         return self.transform(img)
