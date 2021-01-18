@@ -16,7 +16,7 @@ data_generation = EasyDict(dict(
     save_dir=Path('../data/human_dataset/'),
     split_dirs=['train', 'val'],
     obj_type='pedestrian',
-    del_if_exist=True
+    del_if_exist=False
 ))
 
 
@@ -47,5 +47,5 @@ data_filtering = EasyDict(dict(
     min_w=0,
     max_h=10000,
     max_w=10000,
-    del_if_exist=True
+    del_if_exist=False
 ))
