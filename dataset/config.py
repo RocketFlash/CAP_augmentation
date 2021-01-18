@@ -3,11 +3,11 @@ from pathlib import Path
 
 
 '''
-dataset_root - dataset path
-dataset_type - dataset type
-save_dir - save directory path
-split_dirs - split directories to use from [train, val]
-obj_type - type of the object to parse
+    dataset_root - dataset path
+    dataset_type - dataset type
+    save_dir - save directory path
+    split_dirs - split directories to use from [train, val]
+    obj_type - type of the object to parse
 '''
 
 data_generation = EasyDict(dict(

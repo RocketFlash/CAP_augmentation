@@ -38,16 +38,18 @@ def get_T(vtx, vty, vtz):
         [0, 0, 1, vtz],
         [0, 0, 0, 1]])
 
-def calculate_BEV_H(calib_params, pix_per_meter=100):
-    output_w = cfg.camera_info[cfg.camera_name]['output_w']
-    output_h = cfg.camera_info[cfg.camera_name]['output_h']   
+def calculate_BEV_H(calib_params, camera_info=None, pix_per_meter=100):
+    if camera_info is None:
+        camera_info = cfg.camera_info[cfg.camera_name]
+    output_w = camera_info['output_w']
+    output_h = camera_info['output_h']   
     
-    RX = get_RX(cfg.camera_info[cfg.camera_name]['pitch'])
-    RY = get_RY(cfg.camera_info[cfg.camera_name]['yaw'])
-    RZ = get_RZ(cfg.camera_info[cfg.camera_name]['roll'])
-    T = get_T(cfg.camera_info[cfg.camera_name]['tx'], 
-              cfg.camera_info[cfg.camera_name]['ty'], 
-              cfg.camera_info[cfg.camera_name]['tz'])
+    RX = get_RX(camera_info['pitch'])
+    RY = get_RY(camera_info['yaw'])
+    RZ = get_RZ(camera_info['roll'])
+    T = get_T(camera_info['tx'], 
+              camera_info['ty'], 
+              camera_info['tz'])
     
     camera2xyz = get_RX(90) @ get_RZ(180)
     camera2loco =  camera2xyz @ RZ @ RY @ RX @ T
@@ -81,9 +83,10 @@ def calculate_BEV_H(calib_params, pix_per_meter=100):
 
     return image2ground
 
-def get_BEV_H():
-    calib_yaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
-                                   cfg.calib_file_path[cfg.camera_name])
+def get_BEV_H(camera_info=None, calib_yaml_path=None):
+    if calib_yaml_path is None:
+        calib_yaml_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
+                                    cfg.calib_file_path[cfg.camera_name])
     params_to_parse = ['camera_matrix', 
                         'distortion_coefficients', 
                         'projection_matrix', 
@@ -98,16 +101,18 @@ def get_BEV_H():
             matrix = np.array(param['data']).reshape((param['rows'], param['cols']))
             calib_matrices[param_to_parse] = matrix
     
-    H = calculate_BEV_H(calib_matrices, pix_per_meter=cfg.pix_per_meter)
+    H = calculate_BEV_H(calib_matrices, camera_info, pix_per_meter=cfg.pix_per_meter)
     return H, calib_matrices
 
 class BEV(object):
-    def __init__(self):
-        self.H, self.calib_matrices = get_BEV_H()
+    def __init__(self, camera_info=None, calib_yaml_path=None):
+        self.H, self.calib_matrices = get_BEV_H(camera_info, calib_yaml_path)
         self.inv_H = np.linalg.inv(self.H)
         self.pixels_per_meter = cfg.pix_per_meter
-        self.output_w = cfg.camera_info[cfg.camera_name]['output_w']
-        self.output_h = cfg.camera_info[cfg.camera_name]['output_h']
+        if camera_info is None:
+            camera_info = cfg.camera_info[cfg.camera_name]
+        self.output_w = camera_info['output_w']
+        self.output_h = camera_info['output_h']
 
         self.f_x = self.calib_matrices['camera_matrix'][0,0]
         self.f_y = self.calib_matrices['camera_matrix'][1,1]
