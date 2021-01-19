@@ -7,7 +7,8 @@ from src.utils import resize_keep_ar
 class CAP_AUG(object):
     '''
     x_range - if bev_transform is not None range in meters, else in pixels
-    y_range - if bev_transform is not None range in meters, else in pixels 
+    y_range - if bev_transform is not None range in meters, else in pixels
+    coords_format - possible values: [xyxy, xywh, yolo] 
     '''
     def __init__(self, source_images, source_masks, bev_transform=None, 
                                                     n_objects_range=[1, 6],
@@ -15,7 +16,8 @@ class CAP_AUG(object):
                                                     x_range=[-10, 10],
                                                     y_range=[10 ,100],
                                                     persons_idxs=None,
-                                                    random_h_flip=True):
+                                                    random_h_flip=True,
+                                                    coords_format='xyxy'):
         self.source_images = source_images
         self.source_masks = source_masks
         self.bev_transform = bev_transform
@@ -25,6 +27,7 @@ class CAP_AUG(object):
         self.y_range = y_range
         self.persons_idxs = persons_idxs
         self.random_h_flip = random_h_flip
+        self.coords_format = coords_format
 
 
     def __call__(self, image):
@@ -58,13 +61,14 @@ class CAP_AUG(object):
         n_persons = points.shape[0]
         
         if self.persons_idxs is None:
-            persons_idxs = [random.randint(0,len(self.source_masks)) for _ in range(n_persons)]
+            persons_idxs = [random.randint(0,len(self.source_images)-1) for _ in range(n_persons)]
         else:
             persons_idxs = self.persons_idxs
         
         assert len(persons_idxs)==points.shape[0] and points.shape[0]==heights.shape[0]
         
         image_dst = image.copy()
+        dst_h, dst_w, _ = image_dst.shape
         coords_all = []
         
         distances = []
@@ -91,8 +95,28 @@ class CAP_AUG(object):
                 mask_src = resize_keep_ar(mask_src, height=height_pixels)
             image_dst, coords = self.paste_object(image_dst, image_src, mask_src, x_coord, y_coord, self.random_h_flip)
             if coords: coords_all.append(coords)
-            
-        return image_dst, np.array(coords_all)
+        
+        coords_all = np.array(coords_all)
+
+        if self.coords_format == 'yolo':
+            x = coords_all.copy()
+            x = x.astype(float)
+            dw = 1./dst_w
+            dh = 1./dst_h
+            ws = (coords_all[:,2] - coords_all[:,0])
+            hs = (coords_all[:,3] - coords_all[:,1])
+            x[:,0] = dw * (coords_all[:,0] + ws/2.0)
+            x[:,1] = dh * (coords_all[:,1] + hs/2.0)
+            x[:,2] = dw * ws
+            x[:,3] = dh * hs
+            coords_all = x
+        elif self.coords_format =='xywh':
+            x = coords_all.copy()
+            x[:,2] = (coords_all[:,1] - coords_all[:,0])
+            x[:,3] = (coords_all[:,3] - coords_all[:,2])
+            coords_all = x
+
+        return image_dst, coords_all
 
 
     def select_images(self, source_images, source_masks, person_idx):
