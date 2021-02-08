@@ -10,7 +10,6 @@ from src.utils import resize_keep_ar
 class CAP_AUG(object):
     '''
     source_images - list of images paths
-    source_masks - list of masks paths
     n_objects_range - [min, max] number of objects
     h_range - range of objects heights
               if bev_transform is not None range in meters, else in pixels
@@ -22,17 +21,16 @@ class CAP_AUG(object):
     random_h_flip - random horizontal flip
     coords_format - output coordinates format: [xyxy, xywh, yolo] 
     '''
-    def __init__(self, source_images, source_masks, bev_transform=None, 
-                                                    n_objects_range=[1, 6],
-                                                    h_range=[50, 100],
-                                                    x_range=[200, 500],
-                                                    y_range=[100 ,300],
-                                                    persons_idxs=None,
-                                                    random_h_flip=True,
-                                                    coords_format='xyxy'):
+    def __init__(self, source_images, bev_transform=None, 
+                                      n_objects_range=[1, 6],
+                                      h_range=[50, 100],
+                                      x_range=[200, 500],
+                                      y_range=[100 ,300],
+                                      persons_idxs=None,
+                                      random_h_flip=True,
+                                      coords_format='xyxy'):
         
         self.source_images = source_images
-        self.source_masks = source_masks
         self.bev_transform = bev_transform
         self.n_objects_range = n_objects_range
         self.h_range = h_range
@@ -98,18 +96,16 @@ class CAP_AUG(object):
             point = points[idx]
             height = heights[idx]
 
-            image_src, mask_src = self.select_images(self.source_images, self.source_masks, person_idx)
+            image_src = self.select_images(self.source_images, person_idx)
             x_coord, y_coord = int(point[0]), int(point[1])
             
             if self.bev_transform is not None:
                 distance = distances[idx]
                 height_pixels = self.bev_transform.get_height_in_pixels(height, distance)
                 image_src = resize_keep_ar(image_src, height=height_pixels)
-                mask_src = resize_keep_ar(mask_src, height=height_pixels)
             else:
                 image_src = resize_keep_ar(image_src, height=height)
-                mask_src = resize_keep_ar(mask_src, height=height)
-            image_dst, coords = self.paste_object(image_dst, image_src, mask_src, x_coord, y_coord, self.random_h_flip)
+            image_dst, coords = self.paste_object(image_dst, image_src, x_coord, y_coord, self.random_h_flip)
             if coords: coords_all.append(coords)
         
         coords_all = np.array(coords_all)
@@ -135,15 +131,14 @@ class CAP_AUG(object):
         return image_dst, coords_all
 
 
-    def select_images(self, source_images, source_masks, person_idx):
+    def select_images(self, source_images, person_idx):
         source_image_path = source_images[person_idx]
-        source_mask_path  = source_masks[person_idx]
-        image_src = cv2.imread(str(source_image_path))
-        mask_src = cv2.imread(str(source_mask_path),0)
-        return image_src, mask_src
+        image_src = cv2.imread(str(source_image_path), cv2.IMREAD_UNCHANGED)
+        image_src = cv2.cvtColor(image_src, cv2.COLOR_BGR2BGRA)
+        return image_src
 
 
-    def paste_object(self, image_dst, image_src, mask_src, x_coord, y_coord, random_h_flip=True):
+    def paste_object(self, image_dst, image_src, x_coord, y_coord, random_h_flip=True):
         src_h, src_w, _ = image_src.shape
         dst_h, dst_w, _ = image_dst.shape
         x_offset, y_offset = x_coord-int(src_w/2), y_coord-src_h
@@ -161,12 +156,13 @@ class CAP_AUG(object):
         if random_h_flip:
             if random.uniform(0, 1)>0.5:
                 image_src = cv2.flip(image_src, 1)
-                mask_src = cv2.flip(mask_src, 1)
 
-        # Simple cut and paste without preprocessing  
+        # Simple cut and paste without preprocessing
+        mask_src = image_src[:,:,3]
+        rgb_img =  image_src[:,:,:3]
         mask_inv = cv2.bitwise_not(mask_src)
         img1_bg = cv2.bitwise_and(image_dst[y1:y2, x1:x2],image_dst[y1:y2, x1:x2],mask=mask_inv[y1_m:y2_m, x1_m:x2_m])
-        img2_fg = cv2.bitwise_and(image_src[y1_m:y2_m, x1_m:x2_m],image_src[y1_m:y2_m, x1_m:x2_m],mask=mask_src[y1_m:y2_m, x1_m:x2_m])
+        img2_fg = cv2.bitwise_and(rgb_img[y1_m:y2_m, x1_m:x2_m],rgb_img[y1_m:y2_m, x1_m:x2_m],mask=mask_src[y1_m:y2_m, x1_m:x2_m])
         out_img = cv2.add(img1_bg,img2_fg)
 
         image_dst[y1:y2, x1:x2] = out_img

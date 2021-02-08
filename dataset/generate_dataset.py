@@ -68,11 +68,12 @@ def generate_object_dataset_cityscapes(annotations_path, images_path, save_dir, 
                     n_total = obj_region_mask.shape[0]*obj_region_mask.shape[1]
 
                     if n_nonzero/n_total > 0.5:
-                        obj_region_image_path = save_dir / city_image.name.replace(postfix_image,f'{instance_id}_image')
-                        obj_region_mask_path =  save_dir / city_image.name.replace(postfix_image,f'{instance_id}_mask')
+                        obj_region_image_path = save_dir / city_image.name.replace(postfix_image,f'{instance_id}')
 
-                        cv2.imwrite(str(obj_region_image_path), obj_region_image)
-                        cv2.imwrite(str(obj_region_mask_path), obj_region_mask)
+                        obj_rgba = cv2.cvtColor(obj_region_image, cv2.COLOR_RGB2RGBA)
+                        obj_rgba[:, :, 3] = obj_region_mask
+
+                        cv2.imwrite(str(obj_region_image_path), obj_rgba)
 
 if __name__ == '__main__':
 

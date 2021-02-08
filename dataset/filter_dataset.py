@@ -86,13 +86,10 @@ if __name__ == '__main__':
                                                            min_h=cfg.min_h,
                                                            min_w=cfg.min_w)
             for image_name in tqdm(data_names, position=1):
-                src_image_file_path = DATASET_ROOT / f'{image_name}_image.png' 
-                src_mask_file_path = DATASET_ROOT / f'{image_name}_mask.png' 
-                dst_image_file_path = FILTERED_SAVE_PATH / f'{image_name}_image.png'
-                dst_mask_file_path = FILTERED_SAVE_PATH / f'{image_name}_mask.png'
-                if src_image_file_path.is_file() and src_mask_file_path.is_file():
+                src_image_file_path = DATASET_ROOT / f'{image_name}.png'  
+                dst_image_file_path = FILTERED_SAVE_PATH / f'{image_name}.png'
+                if src_image_file_path.is_file():
                     copyfile(src_image_file_path, dst_image_file_path)
-                    copyfile(src_mask_file_path, dst_mask_file_path)
                     copied_files_cntr+=1
         print(f'Total number of copied files: {copied_files_cntr}')
     print('DATASET FILTERED!')
