@@ -2,7 +2,7 @@ camera_name = 'camera0'
 
 # Path to intrinsic camera parameters file
 calib_file_path = {
-    'camera0' : 'AXIS_camera.yaml'
+    'camera0' : 'camera_intrinsic_params.yaml'
 }
 
 # Extrinsic camera parameters

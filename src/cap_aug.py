@@ -1,3 +1,6 @@
+# coding: utf-8
+__author__ = 'RocketFlash: https://github.com/RocketFlash'
+
 import cv2
 import numpy as np
 import random
@@ -6,18 +9,28 @@ from src.utils import resize_keep_ar
 
 class CAP_AUG(object):
     '''
-    x_range - if bev_transform is not None range in meters, else in pixels
-    y_range - if bev_transform is not None range in meters, else in pixels
-    coords_format - possible values: [xyxy, xywh, yolo] 
+    source_images - list of images paths
+    source_masks - list of masks paths
+    n_objects_range - [min, max] number of objects
+    h_range - range of objects heights
+              if bev_transform is not None range in meters, else in pixels
+    x_range - if bev_transform is None -> range in the image coordinate system (in pixels) [int, int]
+              else                     -> range in camera coordinate system (in meters) [float, float]
+    y_range - if bev_transform is None -> range in the image coordinate system (in pixels) [int, int]
+              else                     -> range in camera coordinate system (in meters) [float, float]
+    persons_idxs - objects indexes from dataset to paste [idx1, idx2, ...]
+    random_h_flip - random horizontal flip
+    coords_format - output coordinates format: [xyxy, xywh, yolo] 
     '''
     def __init__(self, source_images, source_masks, bev_transform=None, 
                                                     n_objects_range=[1, 6],
-                                                    h_range=[1.8, 3],
-                                                    x_range=[-10, 10],
-                                                    y_range=[10 ,100],
+                                                    h_range=[50, 100],
+                                                    x_range=[200, 500],
+                                                    y_range=[100 ,300],
                                                     persons_idxs=None,
                                                     random_h_flip=True,
                                                     coords_format='xyxy'):
+        
         self.source_images = source_images
         self.source_masks = source_masks
         self.bev_transform = bev_transform
@@ -93,6 +106,9 @@ class CAP_AUG(object):
                 height_pixels = self.bev_transform.get_height_in_pixels(height, distance)
                 image_src = resize_keep_ar(image_src, height=height_pixels)
                 mask_src = resize_keep_ar(mask_src, height=height_pixels)
+            else:
+                image_src = resize_keep_ar(image_src, height=height)
+                mask_src = resize_keep_ar(mask_src, height=height)
             image_dst, coords = self.paste_object(image_dst, image_src, mask_src, x_coord, y_coord, self.random_h_flip)
             if coords: coords_all.append(coords)
         

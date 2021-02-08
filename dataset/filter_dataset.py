@@ -1,3 +1,6 @@
+# coding: utf-8
+__author__ = 'RocketFlash: https://github.com/RocketFlash'
+
 from tqdm import tqdm
 from scipy.io import loadmat
 from shutil import copyfile, rmtree
