@@ -1,0 +1,6 @@
+tqdm
+easydict
+opencv-python
+numpy
+matplotlib
+scipy
