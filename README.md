@@ -62,7 +62,7 @@ cap_aug = CAP_AUG(SOURCE_IMAGES, n_objects_range=[10,20],
                                         x_range=[500, 1500],
                                         y_range=[600 ,1000],
                                         coords_format='xyxy')
-result_image, result_coords = cap_aug(image)
+result_image, bboxes_coords, semantic_mask, instance_mask = cap_aug(image)
 ```
 
 ### Usage in camera coordinate system (all values are in meters)
@@ -98,7 +98,7 @@ cap_aug = CAP_AUG(SOURCE_IMAGES, bev_transform=bev_transform,
                                                x_range=[-25, 25],
                                                y_range=[0 ,100],
                                                coords_format='yolo')
-result_image, result_coords = cap_aug(image)
+result_image, bboxes_coords, semantic_mask, instance_mask = cap_aug(image)
 ```
 
 
