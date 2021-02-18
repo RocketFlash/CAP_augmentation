@@ -1,9 +1,9 @@
 # "Cut and paste" augmentation
 
-Repository contains easy to use Python implementation of "Cut and paste" augmentation for object detection and instance segmentation. The main idea was taken from [Simple Copy-Paste is a Strong Data Augmentation Method for Instance Segmentation](https://arxiv.org/pdf/2012.07177v1.pdf) and supplemented by the ability to add objects in 3D in the camera coordinate system.
+Repository contains easy to use Python implementation of "Cut and paste" augmentation for object detection and instance and semantic segmentations. The main idea was taken from [Simple Copy-Paste is a Strong Data Augmentation Method for Instance Segmentation](https://arxiv.org/pdf/2012.07177v1.pdf) and supplemented by the ability to add objects in 3D in the camera coordinate system using a Bird's Eye View Transformation (BEV).
 
 <figure>
-  <img src="./example_images/result.png"></img>
+  <img src="./example_images/all.png"></img>
 </figure>
 
 ## Installation
@@ -67,6 +67,8 @@ result_image, result_coords = cap_aug(image)
 
 ### Usage in camera coordinate system (all values are in meters)
 
+When using bev transformation it is necessary to set range values in meters.
+
 ```python
 from src.cap_aug import CAP_AUG
 import cv2
@@ -94,7 +96,8 @@ cap_aug = CAP_AUG(SOURCE_IMAGES, bev_transform=bev_transform,
                                                n_objects_range=[30,50], 
                                                h_range=[2.0, 2.5],
                                                x_range=[-25, 25],
-                                               y_range=[0 ,100])
+                                               y_range=[0 ,100],
+                                               coords_format='yolo')
 result_image, result_coords = cap_aug(image)
 ```
 
