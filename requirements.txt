@@ -4,3 +4,4 @@ opencv-python
 numpy
 matplotlib
 scipy
+pyyaml

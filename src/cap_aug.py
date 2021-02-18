@@ -4,8 +4,12 @@ __author__ = 'RocketFlash: https://github.com/RocketFlash'
 import cv2
 import numpy as np
 import random
-from src.utils import resize_keep_ar
 
+def resize_keep_ar(image, height=500):
+    r = height / float(image.shape[0])
+    width = r * image.shape[1]  
+    image = cv2.resize(image, (int(width), int(height)))
+    return image
 
 class CAP_AUG(object):
     '''
