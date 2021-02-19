@@ -20,29 +20,6 @@ pip install -r requirements.txt
   * OpenCV
   * numpy
 
-
-## Generate pedestrians dataset from CityScapes and CityPersons
-
-Put Cityscapes and CityPersons datasets in data folder. Edit parameters in dataset/config.py if you want and then just run:
-
-```bash
-./dataset/generate_and_filter_dataset.sh 
-```
-
-This script will create a dataset of png images cutted and filtered in the data/human_dataset_filtered folder or in the folder that you specified in the data/config.py file.
-
-Another option is to run python scripts manually step by step. First, we need to create .png files of people using instance masks from cityscapes dataset:
-
-```bash
-python dataset/generate_dataset.py 
-```
-
-Next, we need to filter images to remove too small or too cropped (only a small part of the body is visible) images:
-
-```bash
-python dataset/filter_dataset.py 
-```
-
 ## Example of usage
 
 All examples are shown in [test_generation.ipynb](https://github.com/RocketFlash/CAP_augmentation/blob/main/test_generation.ipynb) 
@@ -54,6 +31,10 @@ from src.cap_aug import CAP_AUG
 import cv2
 
 SOURCE_IMAGES = ['list/', 'of/', 'paths/', 'to/', 'the/', 'source/', 'image/', 'files']
+##### For example a list of paths to images can be set like this #####
+# DATASET_ROOT = Path('data/human_dataset_filtered/')
+# SOURCE_IMAGES = sorted(list(DATASET_ROOT.glob('*.png')))
+######################################################################
 
 image = cv2.imread('path/to/the/destination/image')
 
@@ -61,7 +42,7 @@ cap_aug = CAP_AUG(SOURCE_IMAGES, n_objects_range=[10,20],
                                         h_range=[100,101],
                                         x_range=[500, 1500],
                                         y_range=[600 ,1000],
-                                        coords_format='xyxy')
+                                        coords_format='xyxy') # xyxy, xywh or yolo
 result_image, bboxes_coords, semantic_mask, instance_mask = cap_aug(image)
 ```
 
@@ -97,8 +78,35 @@ cap_aug = CAP_AUG(SOURCE_IMAGES, bev_transform=bev_transform,
                                                h_range=[2.0, 2.5],
                                                x_range=[-25, 25],
                                                y_range=[0 ,100],
-                                               coords_format='yolo')
+                                               coords_format='yolo') # xyxy, xywh or yolo
 result_image, bboxes_coords, semantic_mask, instance_mask = cap_aug(image)
 ```
 
+## Data preparation
+
+Any png images with transparency are suitable for inserting objects for object detection or instance segmentation. It is possible to generate own dataset of png images with transparency by cutting images from various segmentation datasets. An example of preparing such a dataset for insertion is shown below.
+
+### Generate pedestrians dataset from CityScapes and CityPersons
+
+Put Cityscapes and CityPersons datasets in ./data folder. Edit parameters in dataset/config.py if you want and then just run:
+
+```bash
+./dataset/generate_and_filter_dataset.sh 
+```
+
+This script will create a dataset of png images cutted and filtered in the data/human_dataset_filtered folder or in the folder that you specified in the data/config.py file.
+
+Another option is to run python scripts manually step by step. First, we need to create .png files of people using instance masks from cityscapes dataset:
+
+```bash
+python dataset/generate_dataset.py 
+```
+
+Next, we need to filter images to remove too small or too cropped (only a small part of the body is visible) images:
+
+```bash
+python dataset/filter_dataset.py 
+```
+
+Now the dataset for insertion is available in ./data/human_dataset_filtered
 
