@@ -110,3 +110,7 @@ python dataset/filter_dataset.py
 
 Now the dataset for insertion is available in ./data/human_dataset_filtered
 
+## TODO
+
+- [ ] Add easy albumentations integration
+- [ ] Add example of usage on multiple classes
