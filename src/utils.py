@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 
 def show_image(image):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    plt.figure(figsize=(20,20))
+    plt.figure(figsize=(10,10))
     plt.imshow(image)
     plt.title('image')
     plt.show()
@@ -27,9 +27,12 @@ def draw_bboxes(image, bboxes, mask=None, color=(255,0,0)):
 
 
     for bbox in bboxes:
-        cv2.rectangle(result_image,(bbox[0], bbox[1]),(bbox[2], bbox[3]),color,2)
+        if len(bbox)==5:
+            cv2.rectangle(result_image,(bbox[1], bbox[2]),(bbox[3], bbox[4]),color,2)
+        else:
+            cv2.rectangle(result_image,(bbox[0], bbox[1]),(bbox[2], bbox[3]),color,2)
     
     if mask is None:
-        return result_image
+        return result_image, None
     else:
         return result_image, result_mask

@@ -91,7 +91,7 @@ Any png images with transparency are suitable for inserting objects for object d
 Put Cityscapes and CityPersons datasets in ./data folder. Edit parameters in dataset/config.py if you want and then just run:
 
 ```bash
-./dataset/generate_and_filter_dataset.sh 
+./dataset/cityscapes/generate_and_filter_dataset.sh 
 ```
 
 This script will create a dataset of png images cutted and filtered in the data/human_dataset_filtered folder or in the folder that you specified in the data/config.py file.
@@ -99,13 +99,13 @@ This script will create a dataset of png images cutted and filtered in the data/
 Another option is to run python scripts manually step by step. First, we need to create .png files of people using instance masks from cityscapes dataset:
 
 ```bash
-python dataset/generate_dataset.py 
+python dataset/cityscapes/generate_dataset.py 
 ```
 
 Next, we need to filter images to remove too small or too cropped (only a small part of the body is visible) images:
 
 ```bash
-python dataset/filter_dataset.py 
+python dataset/cityscapes/filter_dataset.py 
 ```
 
 Now the dataset for insertion is available in ./data/human_dataset_filtered

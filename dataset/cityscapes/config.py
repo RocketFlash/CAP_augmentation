@@ -11,9 +11,9 @@ from pathlib import Path
 '''
 
 data_generation = EasyDict(dict(
-    dataset_root=Path('../data/cityscapes/'),
+    dataset_root=Path('../../data/cityscapes/'),
     dataset_type='cityscapes',
-    save_dir=Path('../data/human_dataset/'),
+    save_dir=Path('../../data/human_dataset/'),
     split_dirs=['train', 'val'],
     obj_type='pedestrian',
     del_if_exist=False
@@ -36,10 +36,10 @@ data_generation = EasyDict(dict(
 '''
 
 data_filtering = EasyDict(dict(
-    dataset_root=Path('../data/human_dataset/'),
+    dataset_root=Path('../../data/human_dataset/'),
     dataset_type='citypersons',
-    annos_path=Path('../data/CityPersons/'),
-    save_dir=Path('../data/human_dataset_filtered/'),
+    annos_path=Path('../../data/CityPersons/'),
+    save_dir=Path('../../data/human_dataset_filtered/'),
     split_dirs=['train', 'val'],
     class_types=['pedestrian'],
     viz_ratio=0.8,

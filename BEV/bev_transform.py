@@ -149,6 +149,7 @@ class BEV(object):
     def bev_to_points(self, points):
         points_ex = np.ones((points.shape[0],points.shape[1]+1))
         points_ex[:,:2] = points
+        
         new_p = self.inv_H @ points_ex.T
         new_p = new_p.T
         new_p /= new_p[:,2:]
@@ -165,7 +166,9 @@ class BEV(object):
 
     def meters_to_pixels(self, points):
         new_p_pixels = self.pixels_per_meter * points
-        new_p_uncentered = [self.output_w/2, self.output_h] - new_p_pixels
+        new_p_uncentered = [self.output_w/2, self.output_h] - new_p_pixels[:,:2]
+        # if points.shape[1]==3:
+        #     new_p_uncentered = np.c_[new_p_uncentered, new_p_pixels[:,2]]
         new_p_pixels = self.bev_to_points(new_p_uncentered)
 
         return new_p_pixels
