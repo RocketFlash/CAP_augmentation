@@ -78,6 +78,7 @@ cap_aug = CAP_AUG(SOURCE_IMAGES, bev_transform=bev_transform,
                                                h_range=[2.0, 2.5],
                                                x_range=[-25, 25],
                                                y_range=[0 ,100],
+                                               z_range=[0 ,2],
                                                coords_format='yolo') # xyxy, xywh or yolo
 result_image, bboxes_coords, semantic_mask, instance_mask = cap_aug(image)
 ```
