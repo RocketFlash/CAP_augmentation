@@ -83,6 +83,9 @@ cap_aug = CAP_AUG(SOURCE_IMAGES, bev_transform=bev_transform,
 result_image, bboxes_coords, semantic_mask, instance_mask = cap_aug(image)
 ```
 
+### Usage with multiple classes
+Example of usage cold be found in [test_generation.ipynb](https://github.com/RocketFlash/CAP_augmentation/blob/main/test_generation.ipynb) 
+
 ## Data preparation
 
 Any png images with transparency are suitable for inserting objects for object detection or instance segmentation. It is possible to generate own dataset of png images with transparency by cutting images from various segmentation datasets. An example of preparing such a dataset for insertion is shown below.
@@ -114,4 +117,4 @@ Now the dataset for insertion is available in ./data/human_dataset_filtered
 ## TODO
 
 - [ ] Add easy albumentations integration
-- [ ] Add example of usage on multiple classes
+- [x] Add example of usage on multiple classes

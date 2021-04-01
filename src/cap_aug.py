@@ -40,18 +40,23 @@ class CAP_AUG_Multiclass(object):
         for cap_aug, p, class_idx in zip(self.cap_augs, self.probabilities, self.class_idxs):
             if p>=np.random.uniform(0, 1, size=1):
                 result_image, result_coords, semantic_mask, instance_mask = cap_aug(result_image)
-                
                 total_result_coords.append(np.c_[class_idx*np.ones(len(result_coords)), result_coords])
                 total_semantic_masks.append(semantic_mask)
                 total_instance_masks.append(instance_mask)
                 
         if len(total_result_coords)>0:
             total_result_coords = np.vstack(total_result_coords)
-            # total_result_coords = total_result_coords.astype(int)
-        return result_image, total_result_coords, None, None
+
+        result_sem_mask = None
+
+        for sem_mask, class_idx in zip(total_semantic_masks, self.class_idxs):
+            if result_sem_mask is None:
+                result_sem_mask = sem_mask * class_idx
+            else:
+                result_sem_mask[sem_mask==1] = class_idx
+        
+        return result_image, total_result_coords, result_sem_mask, total_instance_masks
     
-
-
 
 class CAP_AUG(object):
     '''
@@ -74,7 +79,8 @@ class CAP_AUG(object):
     histogram_matching - apply histogram matching
     hm_offset - histogram matching offset
     blending_coeff - coefficient of image blending
-    coords_format - output coordinates format: [xyxy, xywh, yolo]
+    image_format - color image format : {bgr, rgb}
+    coords_format - output coordinates format: {xyxy, xywh, yolo}
     normilized_range - range in normilized image coordinates (all values are in range [0, 1])  
     '''
     def __init__(self, source_images, bev_transform=None,
@@ -90,6 +96,7 @@ class CAP_AUG(object):
                                       random_v_flip=False,
                                       histogram_matching=False,
                                       hm_offset=200,
+                                      image_format='bgr',
                                       coords_format='xyxy',
                                       normilized_range=False,
                                       blending_coeff=0):
@@ -104,6 +111,7 @@ class CAP_AUG(object):
         self.objects_idxs = objects_idxs
         self.random_h_flip = random_h_flip
         self.random_v_flip = random_v_flip
+        self.image_format = image_format
         self.coords_format = coords_format
         self.normilized_range = normilized_range
         self.probability_map = probability_map
@@ -233,8 +241,23 @@ class CAP_AUG(object):
             if coords: 
                 coords_all.append(coords)
                 x1,y1,x2,y2 = coords
-                semantic_mask[y1:y2, x1:x2] = mask
-                instance_mask[y1:y2, x1:x2] = mask * idx
+                curr_mask = mask/255
+                curr_mask = curr_mask.astype(np.uint8)
+                curr_mask_ins = curr_mask*idx
+
+                roi_mask_sem = semantic_mask[y1:y2, x1:x2]
+                roi_mask_ins = instance_mask[y1:y2, x1:x2]
+
+                mask_inv = cv2.bitwise_not(curr_mask*255)
+
+                img_sem_bg = cv2.bitwise_and(roi_mask_sem , roi_mask_sem, mask = mask_inv)
+                img_ins_bg = cv2.bitwise_and(roi_mask_ins , roi_mask_ins, mask = mask_inv)
+                
+                dst_sem = cv2.add(img_sem_bg, curr_mask)
+                dst_ins = cv2.add(img_ins_bg, curr_mask_ins)
+
+                semantic_mask[y1:y2, x1:x2] = dst_sem
+                instance_mask[y1:y2, x1:x2] = dst_ins
         
         coords_all = np.array(coords_all)
 
@@ -262,7 +285,10 @@ class CAP_AUG(object):
     def select_images(self, source_images, object_idx):
         source_image_path = source_images[object_idx]
         image_src = cv2.imread(str(source_image_path), cv2.IMREAD_UNCHANGED)
-        image_src = cv2.cvtColor(image_src, cv2.COLOR_BGR2BGRA)
+        if self.image_format=='rgb':
+            image_src = cv2.cvtColor(image_src, cv2.COLOR_BGR2RGBA)
+        else:
+            image_src = cv2.cvtColor(image_src, cv2.COLOR_BGR2BGRA)
         return image_src
 
 
