@@ -6,3 +6,4 @@ matplotlib
 scipy
 pyyaml
 scikit-image
+albumentations

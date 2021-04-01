@@ -5,6 +5,8 @@ import cv2
 import numpy as np
 import random
 from skimage import exposure
+import albumentations as A
+from albumentations.augmentations.bbox_utils import denormalize_bbox, normalize_bbox
 
 def resize_keep_ar(image, height=500):
     r = height / float(image.shape[0])
@@ -99,7 +101,8 @@ class CAP_AUG(object):
                                       image_format='bgr',
                                       coords_format='xyxy',
                                       normilized_range=False,
-                                      blending_coeff=0):
+                                      blending_coeff=0,
+                                      class_idx=None):
         
         self.source_images = source_images
         self.bev_transform = bev_transform
@@ -119,6 +122,7 @@ class CAP_AUG(object):
         self.histogram_matching = histogram_matching
         self.hm_offset = hm_offset
         self.blending_coeff = blending_coeff
+        self.class_idx = class_idx
 
 
     def __call__(self, image):
@@ -202,7 +206,7 @@ class CAP_AUG(object):
             point = points[idx]
             height = heights[idx]
 
-            image_src = self.select_images(self.source_images, object_idx)
+            image_src = self.select_image(self.source_images, object_idx)
             
             if self.probability_map is not None or self.normilized_range:
                 x_coord, y_coord = int(point[0]*dst_w), int(point[1]*dst_h)
@@ -279,10 +283,13 @@ class CAP_AUG(object):
             x[:,3] = (coords_all[:,3] - coords_all[:,2])
             coords_all = x
 
+        if self.class_idx is not None:
+            coords_all = np.c_[coords_all, self.class_idx*np.ones(len(coords_all))]
+
         return image_dst, coords_all, semantic_mask, instance_mask
 
 
-    def select_images(self, source_images, object_idx):
+    def select_image(self, source_images, object_idx):
         source_image_path = source_images[object_idx]
         image_src = cv2.imread(str(source_image_path), cv2.IMREAD_UNCHANGED)
         if self.image_format=='rgb':
@@ -339,3 +346,37 @@ class CAP_AUG(object):
         # image_dst = cv2.seamlessClone(image_src, image_dst, mask_src, center, cv2.MONOCHROME_TRANSFER )
         
         return image_dst, coords, mask_visible
+
+
+class CAP_Albu(A.DualTransform):
+    def __init__(self, p=0.5, always_apply=False, **kwargs):
+        super(CAP_Albu, self).__init__(always_apply, p)
+
+        self.cap_aug = CAP_AUG(**kwargs)
+        self.p = p
+        self.always_apply = always_apply
+
+
+    @staticmethod
+    def get_class_fullname():
+        return 'CAP_Albu'
+
+
+    def apply(self, image,  **params):
+        result_image, result_coords, semantic_mask, instance_mask = self.cap_aug(image)
+        self.cap_image = result_image
+        self.cap_bboxes = result_coords
+        self.cap_mask_sem = semantic_mask
+        self.cap_mask_ins = instance_mask
+        return result_image
+
+    def apply_to_mask(self, mask, **params):
+        return cv2.bitwise_or(mask, self.cap_mask_sem)
+
+    def apply_to_bboxes(self, bboxes, **params):
+        h, w, c = self.cap_image.shape
+        norm_cap_bboxes = [normalize_bbox(bbox,rows=h, cols=w) for bbox in self.cap_bboxes]
+        return np.concatenate((bboxes, norm_cap_bboxes),axis=0)
+
+    def apply_to_keypoints(self, **params):
+        raise NotImplementedError

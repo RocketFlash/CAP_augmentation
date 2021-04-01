@@ -1,6 +1,6 @@
 # "Cut and paste" augmentation
 
-Repository contains easy to use Python implementation of "Cut and paste" augmentation for object detection and instance and semantic segmentations. The main idea was taken from [Simple Copy-Paste is a Strong Data Augmentation Method for Instance Segmentation](https://arxiv.org/pdf/2012.07177v1.pdf) and supplemented by the ability to add objects in 3D in the camera coordinate system using a Bird's Eye View Transformation (BEV).
+Repository contains easy to use Python implementation of "Cut and paste" augmentation for object detection and instance and semantic segmentations. The main idea was taken from [Simple Copy-Paste is a Strong Data Augmentation Method for Instance Segmentation](https://arxiv.org/pdf/2012.07177v1.pdf) and supplemented by the ability to add objects in 3D in the camera coordinate system using a Bird's Eye View Transformation (BEV). Easy to use with [albumentations](https://github.com/albumentations-team/albumentations)
 
 <figure>
   <img src="./example_images/all.png"></img>
@@ -83,6 +83,28 @@ cap_aug = CAP_AUG(SOURCE_IMAGES, bev_transform=bev_transform,
 result_image, bboxes_coords, semantic_mask, instance_mask = cap_aug(image)
 ```
 
+### Usage with albumentations
+
+```python
+
+from src.cap_aug import CAP_Albu
+import albumentations as A
+
+transform = A.Compose([
+    CAP_Albu(p=1, 
+               source_images=SOURCE_IMAGES, 
+               n_objects_range=[10,20], 
+               h_range=[100,101],
+               x_range=[500, 1500],
+               y_range=[600 ,1000],
+               class_idx=1),
+    A.HorizontalFlip(p=0.5),
+    A.RandomBrightnessContrast(p=0.2),
+    A.RandomRain(p=1.0, blur_value=3)
+], bbox_params=A.BboxParams(format='pascal_voc'))
+   
+```
+
 ### Usage with multiple classes
 Example of usage cold be found in [test_generation.ipynb](https://github.com/RocketFlash/CAP_augmentation/blob/main/test_generation.ipynb) 
 
@@ -116,5 +138,5 @@ Now the dataset for insertion is available in ./data/human_dataset_filtered
 
 ## TODO
 
-- [ ] Add easy albumentations integration
+- [x] Add easy albumentations integration
 - [x] Add example of usage on multiple classes
