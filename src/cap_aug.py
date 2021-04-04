@@ -83,7 +83,9 @@ class CAP_AUG(object):
     blending_coeff - coefficient of image blending
     image_format - color image format : {bgr, rgb}
     coords_format - output coordinates format: {xyxy, xywh, yolo}
-    normilized_range - range in normilized image coordinates (all values are in range [0, 1])  
+    normilized_range - range in normilized image coordinates (all values are in range [0, 1])
+    class_id - class id to result bounding boxes, output bboxes will be in [x1, y1, x2, y2, class_id] format
+    albu_transforms - albumentations transformations applied to pasted objects 
     '''
     def __init__(self, source_images, bev_transform=None,
                                       probability_map=None,
@@ -102,7 +104,8 @@ class CAP_AUG(object):
                                       coords_format='xyxy',
                                       normilized_range=False,
                                       blending_coeff=0,
-                                      class_idx=None):
+                                      class_idx=None,
+                                      albu_transforms=None):
         
         self.source_images = source_images
         self.bev_transform = bev_transform
@@ -123,6 +126,7 @@ class CAP_AUG(object):
         self.hm_offset = hm_offset
         self.blending_coeff = blending_coeff
         self.class_idx = class_idx
+        self.albu_transforms = albu_transforms
 
 
     def __call__(self, image):
@@ -324,20 +328,26 @@ class CAP_AUG(object):
 
         # Simple cut and paste without preprocessing
         mask_src = image_src[:,:,3]
+        rgb_img =  image_src[:,:,:3]
+
+        if self.albu_transforms is not None:
+            transformed = self.albu_transforms(image=rgb_img, mask=mask_src)
+            rgb_img = transformed['image']
+            mask_src = transformed['mask']
+
         if self.blending_coeff>0:
             beta = (1.0 - self.blending_coeff)
-            out_img = cv2.addWeighted(image_src[y1_m:y2_m, x1_m:x2_m,:3], self.blending_coeff, image_dst[y1:y2, x1:x2], beta, 0.0)
+            out_img = cv2.addWeighted(rgb_img[y1_m:y2_m, x1_m:x2_m], self.blending_coeff, image_dst[y1:y2, x1:x2], beta, 0.0)
         else:
-            rgb_img =  image_src[:,:,:3]
             mask_inv = cv2.bitwise_not(mask_src)
             img1_bg = cv2.bitwise_and(image_dst[y1:y2, x1:x2],image_dst[y1:y2, x1:x2],mask=mask_inv[y1_m:y2_m, x1_m:x2_m])
             img2_fg = cv2.bitwise_and(rgb_img[y1_m:y2_m, x1_m:x2_m],rgb_img[y1_m:y2_m, x1_m:x2_m],mask=mask_src[y1_m:y2_m, x1_m:x2_m])
             out_img = cv2.add(img1_bg,img2_fg)
 
-        image_dst[y1:y2, x1:x2] = out_img
-        coords = [x1,y1,x2,y2]
         mask_visible = mask_src[y1_m:y2_m, x1_m:x2_m]
         
+        image_dst[y1:y2, x1:x2] = out_img
+        coords = [x1,y1,x2,y2]
         # Poisson editing
         # kernel = np.ones((5,5),np.uint8)
         # mask_src = cv2.dilate(mask_src, kernel,iterations=2)
