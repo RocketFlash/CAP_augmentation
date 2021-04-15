@@ -90,7 +90,7 @@ class CAP_AUG(object):
     image_format - color image format : {bgr, rgb}
     coords_format - output coordinates format: {xyxy, xywh, yolo}
     normilized_range - range in normilized image coordinates (all values are in range [0, 1])
-    class_id - class id to result bounding boxes, output bboxes will be in [x1, y1, x2, y2, class_id] format
+    class_idx - class id to result bounding boxes, output bboxes will be in [x1, y1, x2, y2, class_idx] format
     albu_transforms - albumentations transformations applied to pasted objects 
     '''
     def __init__(self, source_images, bev_transform=None,
@@ -309,15 +309,15 @@ class CAP_AUG(object):
             dh = 1./dst_h
             ws = (coords_all[:,2] - coords_all[:,0])
             hs = (coords_all[:,3] - coords_all[:,1])
-            x[:,0] = dw * (coords_all[:,0] + ws/2.0)
-            x[:,1] = dh * (coords_all[:,1] + hs/2.0)
+            x[:,0] = dw * ((coords_all[:,0] + ws/2.0)-1)
+            x[:,1] = dh * ((coords_all[:,1] + hs/2.0)-1)
             x[:,2] = dw * ws
             x[:,3] = dh * hs
             coords_all = x
         elif self.coords_format =='xywh':
             x = coords_all.copy()
-            x[:,2] = (coords_all[:,1] - coords_all[:,0])
-            x[:,3] = (coords_all[:,3] - coords_all[:,2])
+            x[:,2] = coords_all[:,2] - coords_all[:,0]
+            x[:,3] = coords_all[:,3] - coords_all[:,1]
             coords_all = x
 
         if self.class_idx is not None:
@@ -410,17 +410,28 @@ class CAP_Albu(A.DualTransform):
         self.cap_bboxes = result_coords
         self.cap_mask_sem = semantic_mask
         self.cap_mask_ins = instance_mask
+        h, w, c = self.cap_image.shape
+        self.img_h = h
+        self.img_w = w
         return result_image
 
     def apply_to_mask(self, mask, **params):
         return cv2.bitwise_or(mask, self.cap_mask_sem)
 
     def apply_to_bboxes(self, bboxes, **params):
-        h, w, c = self.cap_image.shape
-        norm_cap_bboxes = [normalize_bbox(bbox,rows=h, cols=w) for bbox in self.cap_bboxes]
-        if len(bboxes) == 0:
-            return norm_cap_bboxes
-        return np.concatenate((bboxes, norm_cap_bboxes),axis=0)
+        norm_cap_bboxes = [normalize_bbox(bbox,rows=self.img_h, cols=self.img_w) for bbox in self.cap_bboxes]
+        bboxes = np.array(bboxes)
+        norm_cap_bboxes = np.array(norm_cap_bboxes)
+
+
+        if len(bboxes)>0 and len(norm_cap_bboxes)>0:
+            bbx_result = np.concatenate((bboxes, norm_cap_bboxes),axis=0)
+        elif len(norm_cap_bboxes)>0:
+            bbx_result = norm_cap_bboxes
+        else:
+            bbx_result =  bboxes
+
+        return bbx_result
 
     def apply_to_keypoints(self, **params):
         raise NotImplementedError
