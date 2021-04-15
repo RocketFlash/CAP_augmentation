@@ -8,10 +8,15 @@ from skimage import exposure
 import albumentations as A
 from albumentations.augmentations.bbox_utils import denormalize_bbox, normalize_bbox
 
-def resize_keep_ar(image, height=500):
-    r = height / float(image.shape[0])
-    width = r * image.shape[1]  
-    image = cv2.resize(image, (int(width), int(height)))
+def resize_keep_ar(image, height=500, scale=None):
+    if scale is not None:
+        print(scale)
+        print(scale.dtype)
+        image = cv2.resize(image,None,fx=float(scale), fy=float(scale))
+    else:
+        r = height / float(image.shape[0])
+        width = r * image.shape[1]  
+        image = cv2.resize(image, (int(width), int(height)))
     return image
 
 
@@ -67,6 +72,7 @@ class CAP_AUG(object):
     probability_map - mask with brobability values
     mean_h_norm - mean normilized heiht
     n_objects_range - [min, max] number of objects
+    s_range - range of scales of original image size
     h_range - range of objects heights
               if bev_transform is not None range in meters, else in pixels
     x_range - if bev_transform is None -> range in the image coordinate system (in pixels) [int, int]
@@ -91,7 +97,8 @@ class CAP_AUG(object):
                                       probability_map=None,
                                       mean_h_norm=None, 
                                       n_objects_range=[1, 6],
-                                      h_range=[50, 100],
+                                      h_range=None,
+                                      s_range=[0.5, 1.5],
                                       x_range=[200, 500],
                                       y_range=[100 ,300],
                                       z_range=[0 ,0],
@@ -110,6 +117,7 @@ class CAP_AUG(object):
         self.source_images = source_images
         self.bev_transform = bev_transform
         self.n_objects_range = n_objects_range
+        self.s_range = s_range
         self.h_range = h_range
         self.x_range = x_range
         self.y_range = y_range
@@ -135,48 +143,65 @@ class CAP_AUG(object):
 
     def generate_objects(self, image):
         n_objects = random.randint(*self.n_objects_range)
+        heights = None
+        scales = None
+
         if self.probability_map is not None:
             p_h, p_w = self.probability_map.shape
             prob_map_1d = np.squeeze(self.probability_map.reshape((1,-1)))
             select_indexes = np.random.choice(np.arange(prob_map_1d.size), n_objects, p=prob_map_1d)
             points = [[(select_idx%p_w)/p_w, (select_idx//p_w)/p_h] for select_idx in select_indexes]
             points = np.array(points)
+
             if self.mean_h_norm is not None:
                 heights = np.random.uniform(low=self.mean_h_norm*0.98, 
                                             high=self.mean_h_norm*1.02, 
                                             size=(n_objects,1))
             else:
-                heights = np.random.uniform(low=self.h_range[0], 
-                                            high=self.h_range[1], 
-                                            size=(n_objects,1))
+                if self.h_range is not None:
+                    heights = np.random.uniform(low=self.h_range[0], 
+                                                high=self.h_range[1], 
+                                                size=(n_objects,1))
         else:
             if self.bev_transform is not None:
                 points = np.random.uniform(low=[self.x_range[0], self.y_range[0], self.z_range[0]], 
                                         high=[self.x_range[1], self.y_range[1], self.z_range[1]], 
                                         size=(n_objects, 3))
-                heights = np.random.uniform(low=self.h_range[0], 
-                                            high=self.h_range[1], 
-                                            size=(n_objects,1))
+                if self.h_range is not None:
+                    heights = np.random.uniform(low=self.h_range[0], 
+                                                high=self.h_range[1], 
+                                                size=(n_objects,1))
+                else:
+                    heights = np.random.uniform(low=0.5, 
+                                                high=1.5, 
+                                                size=(n_objects,1))
+                    
             elif self.normilized_range:
                 points = np.random.uniform(low=[self.x_range[0], self.y_range[0]], 
                                         high=[self.x_range[1], self.y_range[1]], 
                                         size=(n_objects, 3))
-                heights = np.random.uniform(low=self.h_range[0], 
-                                            high=self.h_range[1], 
-                                            size=(n_objects,1))
+                if self.h_range is not None:
+                    heights = np.random.uniform(low=self.h_range[0], 
+                                                high=self.h_range[1], 
+                                                size=(n_objects,1))
 
             else:
                 points = np.random.randint(low=[self.x_range[0], self.y_range[0]], 
                                         high=[self.x_range[1], self.y_range[1]], 
                                         size=(n_objects,2))
-                heights = np.random.randint(low=self.h_range[0], 
-                                            high=self.h_range[1], 
-                                            size=(n_objects,1))
-        
-        return self.generate_objects_coord(image, points, heights)
+                if self.h_range is not None:
+                    heights = np.random.randint(low=self.h_range[0], 
+                                                high=self.h_range[1], 
+                                                size=(n_objects,1))
+        if heights is None:
+            scales = np.random.uniform(low=self.s_range[0], 
+                                                    high=self.s_range[1], 
+                                                    size=(n_objects,1))
+
+        return self.generate_objects_coord(image, points, heights, scales)
 
 
-    def generate_objects_coord(self, image, points, heights):
+    def generate_objects_coord(self, image, points, heights, scales):
         '''
             points - numpy array of coordinates in meters with shape [n,2]
         '''
@@ -187,7 +212,7 @@ class CAP_AUG(object):
         else:
             objects_idxs = self.objects_idxs
         
-        assert len(objects_idxs)==points.shape[0] and points.shape[0]==heights.shape[0]
+        assert len(objects_idxs)==points.shape[0]
         
         image_dst = image.copy()
         dst_h, dst_w, _ = image_dst.shape
@@ -199,7 +224,10 @@ class CAP_AUG(object):
             distances = self.bev_transform.calculate_dist_meters(points)
             d_sorted_idxs = np.argsort(distances)[::-1]
             distances = distances[d_sorted_idxs]
-            heights = heights[d_sorted_idxs]
+            if heights is not None:
+                heights = heights[d_sorted_idxs]
+            else:
+                scales = scales[d_sorted_idxs]
             z_offsets = points[:,2]
             points = points_pixels[d_sorted_idxs]
         
@@ -208,14 +236,19 @@ class CAP_AUG(object):
 
         for idx, object_idx in enumerate(objects_idxs):
             point = points[idx]
-            height = heights[idx]
+            if heights is not None:
+                height = heights[idx]
+                scale = None
+            else:
+                scale = scales[idx]
+                height = None
 
             image_src = self.select_image(self.source_images, object_idx)
             
             if self.probability_map is not None or self.normilized_range:
                 x_coord, y_coord = int(point[0]*dst_w), int(point[1]*dst_h)
                 height *= dst_h
-                image_src = resize_keep_ar(image_src, height=height)
+                image_src = resize_keep_ar(image_src, height=height, scale=scale)
             else:
                 x_coord, y_coord = int(point[0]), int(point[1])
                 if self.bev_transform is not None:
@@ -229,7 +262,7 @@ class CAP_AUG(object):
 
                     image_src = resize_keep_ar(image_src, height=height_pixels)
                 else:
-                    image_src = resize_keep_ar(image_src, height=height)
+                    image_src = resize_keep_ar(image_src, height=height, scale=scale)
             
             if self.histogram_matching:
                 multi = True if image_src.shape[-1] > 1 else False
@@ -345,7 +378,6 @@ class CAP_AUG(object):
             out_img = cv2.add(img1_bg,img2_fg)
 
         mask_visible = mask_src[y1_m:y2_m, x1_m:x2_m]
-        
         image_dst[y1:y2, x1:x2] = out_img
         coords = [x1,y1,x2,y2]
         # Poisson editing
@@ -386,6 +418,8 @@ class CAP_Albu(A.DualTransform):
     def apply_to_bboxes(self, bboxes, **params):
         h, w, c = self.cap_image.shape
         norm_cap_bboxes = [normalize_bbox(bbox,rows=h, cols=w) for bbox in self.cap_bboxes]
+        if len(bboxes) == 0:
+            return norm_cap_bboxes
         return np.concatenate((bboxes, norm_cap_bboxes),axis=0)
 
     def apply_to_keypoints(self, **params):
