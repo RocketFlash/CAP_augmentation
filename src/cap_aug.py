@@ -284,7 +284,7 @@ class CAP_AUG(object):
                 x1,y1,x2,y2 = coords
                 curr_mask = mask/255
                 curr_mask = curr_mask.astype(np.uint8)
-                curr_mask_ins = curr_mask*idx
+                curr_mask_ins = curr_mask*(idx+1)
 
                 roi_mask_sem = semantic_mask[y1:y2, x1:x2]
                 roi_mask_ins = instance_mask[y1:y2, x1:x2]
