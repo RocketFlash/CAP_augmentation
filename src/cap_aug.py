@@ -10,8 +10,6 @@ from albumentations.augmentations.bbox_utils import denormalize_bbox, normalize_
 
 def resize_keep_ar(image, height=500, scale=None):
     if scale is not None:
-        print(scale)
-        print(scale.dtype)
         image = cv2.resize(image,None,fx=float(scale), fy=float(scale))
     else:
         r = height / float(image.shape[0])
