@@ -24,6 +24,9 @@ pip install -r requirements.txt
 
 All examples are shown in [test_generation.ipynb](https://github.com/RocketFlash/CAP_augmentation/blob/main/test_generation.ipynb) 
 
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1Rmln475YERs5ZIp3_jDKTV8JEfk_qDdy?usp=sharing)
+
 ### Usage in pixel coordinates
 
 ```python
@@ -114,7 +117,7 @@ Any png images with transparency are suitable for inserting objects for object d
 
 ### Generate pedestrians dataset from CityScapes and CityPersons
 
-Put Cityscapes and CityPersons datasets in ./data folder. Edit parameters in dataset/config.py if you want and then just run:
+Put [Cityscapes](https://www.cityscapes-dataset.com/) and [CityPersons](https://github.com/cvgroup-njust/CityPersons) datasets in ./data folder. Edit parameters in dataset/config.py if you want and then just run:
 
 ```bash
 ./dataset/cityscapes/generate_and_filter_dataset.sh 
@@ -140,3 +143,4 @@ Now the dataset for insertion is available in ./data/human_dataset_filtered
 
 - [x] Add easy albumentations integration
 - [x] Add example of usage on multiple classes
+- [x] Add Colab notebook with examples
