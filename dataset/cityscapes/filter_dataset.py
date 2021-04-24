@@ -1,12 +1,12 @@
 # coding: utf-8
 __author__ = 'RocketFlash: https://github.com/RocketFlash'
 
-from tqdm import tqdm
 from scipy.io import loadmat
 from shutil import copyfile, rmtree
 from pathlib import Path
 import os
 from config import data_filtering as cfg
+import argparse
 
 ''' 
     class_label =0: ignore regions (fake humans, e.g. people on posters, reflections etc.)
@@ -41,7 +41,7 @@ def filter_data(mat_file_path, allowed_classes=['pedestrian'],
     
     filtered_file_names = []
     
-    for img_idx in tqdm(range(len(mat)), leave=True, position=0):
+    for img_idx in tqdm(range(len(mat)), position=0):
         img_anno = mat[img_idx][0, 0]
 
         img_name_with_ext = img_anno[1][0]
@@ -62,6 +62,15 @@ def filter_data(mat_file_path, allowed_classes=['pedestrian'],
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--notebook', action='store_true', help='true if run it in jupyter notebook')
+    args = parser.parse_args()
+
+    if args.notebook:
+        from tqdm.notebook import tqdm
+    else:
+        from tqdm import tqdm
+
     print('START DATASET FILTERING')
     if cfg.dataset_type=='citypersons':
         DATASET_ROOT = cfg.dataset_root
