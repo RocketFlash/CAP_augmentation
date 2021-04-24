@@ -41,7 +41,7 @@ def filter_data(mat_file_path, allowed_classes=['pedestrian'],
     
     filtered_file_names = []
     
-    for img_idx in tqdm(range(len(mat))):
+    for img_idx in tqdm(range(len(mat)), leave=True, position=0):
         img_anno = mat[img_idx][0, 0]
 
         img_name_with_ext = img_anno[1][0]
