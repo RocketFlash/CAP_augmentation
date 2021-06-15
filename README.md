@@ -1,5 +1,7 @@
 # "Cut and paste" augmentation
 
+[![DOI](https://zenodo.org/badge/328174810.svg)](https://zenodo.org/badge/latestdoi/328174810)
+
 Repository contains easy to use Python implementation of "Cut and paste" augmentation for object detection and instance and semantic segmentations. The main idea was taken from [Simple Copy-Paste is a Strong Data Augmentation Method for Instance Segmentation](https://arxiv.org/pdf/2012.07177v1.pdf) and supplemented by the ability to add objects in 3D in the camera coordinate system using a Bird's Eye View Transformation (BEV). Easy to use with [albumentations](https://github.com/albumentations-team/albumentations)
 
 <figure>
