@@ -90,6 +90,13 @@ if __name__ == '__main__':
         ANNOTATIONS_PATH = DATASET_ROOT / 'gtFine/'
         IMAGES_PATH = DATASET_ROOT / 'leftImg8bit/'
         
+        assert DATASET_ROOT.is_dir(), f"Dataset root path: {DATASET_ROOT} does not exists!"
+        assert ANNOTATIONS_PATH.is_dir(), f"Annotation path: {ANNOTATIONS_PATH} is not found in dataset root path, " \
+                                          f"please download data from https://www.cityscapes-dataset.com/downloads/ "
+
+        assert IMAGES_PATH.is_dir(), f"Image path: {IMAGES_PATH} is not found in dataset root path, please download " \
+                                     f"data from https://www.cityscapes-dataset.com/downloads/ "
+        
         SAVE_DIR = cfg.save_dir
 
         if cfg.del_if_exist:
